@@ -258,6 +258,56 @@ main { min-height: calc(100vh - var(--app-bar-height)); padding-bottom: calc(var
 .burial-detail-card blockquote { margin: 16px 0; padding: 14px; border-left: 3px solid var(--cinnabar); background: var(--cinnabar-soft); color: #653027; }
 .burial-facts { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .burial-facts span { padding: 6px 8px; background: var(--paper-deep); color: var(--ink-soft); font-size: 12px; }
+.wiki-teaser { position: relative; overflow: hidden; min-height: 500px; margin: -26px; padding: 28px; color: white; background: var(--pine-deep); }
+.wiki-teaser::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(180deg, rgba(15,30,28,.12), rgba(15,30,28,.84)), var(--teaser-image); background-size: cover; background-position: center; filter: saturate(.92); }
+.wiki-teaser > * { position: relative; z-index: 1; }
+.wiki-teaser .eyebrow { color: rgba(255,255,255,.72); }
+.wiki-teaser blockquote { border-color: rgba(255,255,255,.45); background: rgba(255,255,255,.12); color: white; backdrop-filter: blur(8px); }
+.wiki-teaser p { color: rgba(255,255,255,.78); }
+.wiki-teaser .primary-button { margin-top: 20px; background: rgba(255,255,255,.92); color: var(--pine-deep); box-shadow: none; }
+.burial-wiki-page { position: relative; overflow: hidden; margin-top: -28px; padding: clamp(18px, 4vw, 34px); border-radius: 8px; color: white; background: #142520; }
+.wiki-sea { background: #102a36; }
+.wiki-tree { background: #173324; }
+.wiki-sky_burial { background: #302b25; }
+.wiki-atmosphere { position: absolute; inset: 0; opacity: .36; pointer-events: none; background: radial-gradient(circle at 18% 8%, rgba(255,255,255,.28), transparent 28%), linear-gradient(135deg, rgba(255,255,255,.08), transparent 48%); }
+.wiki-back { position: relative; z-index: 2; color: rgba(255,255,255,.82); }
+.wiki-hero { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, .74fr) minmax(380px, 1fr); gap: clamp(28px, 6vw, 70px); align-items: center; min-height: 620px; }
+.wiki-copy h2 { margin: 0; font-family: var(--display); font-size: clamp(58px, 10vw, 112px); font-weight: 500; line-height: .96; }
+.wiki-copy .eyebrow { color: rgba(255,255,255,.7); }
+.wiki-copy blockquote { max-width: 560px; margin: 22px 0; padding: 0 0 0 18px; border-left: 3px solid rgba(255,255,255,.56); color: white; font-family: var(--display); font-size: clamp(24px, 4vw, 36px); line-height: 1.35; }
+.wiki-copy p { max-width: 590px; color: rgba(255,255,255,.72); font-size: 17px; }
+.wiki-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.wiki-facts span { padding: 7px 10px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: rgba(255,255,255,.84); font-size: 12px; backdrop-filter: blur(12px); }
+.fan-gallery { display: grid; justify-items: center; gap: 20px; min-width: 0; }
+.fan-stage { position: relative; width: min(100%, 560px); height: min(68vh, 620px); min-height: 430px; }
+.fan-photo { position: absolute; top: 50%; left: 50%; width: min(62vw, 330px); max-width: 330px; aspect-ratio: 9 / 13; padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.22); border-radius: 8px; background: rgba(255,255,255,.08); box-shadow: 0 24px 80px rgba(0,0,0,.32); cursor: pointer; transform: translate(-50%, -50%) translate(var(--fan-x, 0), var(--fan-y, 0)) rotate(var(--fan-rot, 0)) scale(var(--fan-scale, 1)); transition: transform 520ms cubic-bezier(.2,.8,.2,1), opacity 360ms ease, filter 360ms ease; }
+.fan-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.fan-photo:not(.is-active) { opacity: .74; filter: saturate(.8) brightness(.82); }
+.fan-photo.is-active { opacity: 1; filter: saturate(1.04) brightness(1); }
+.fan-photo.is-hidden { opacity: 0; pointer-events: none; }
+.fan-photo:hover { transform: translate(-50%, -50%) translate(var(--fan-x, 0), calc(var(--fan-y, 0) - 18px)) rotate(var(--fan-rot, 0)) scale(calc(var(--fan-scale, 1) * 1.045)); }
+.fan-controls { display: flex; align-items: center; gap: 14px; }
+.fan-controls .icon-button { border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: rgba(255,255,255,.8); }
+.fan-controls > div { display: flex; gap: 7px; }
+.fan-controls span { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.28); }
+.fan-controls span.is-active { background: white; transform: scale(1.25); }
+.wiki-body { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; padding-bottom: 18px; }
+.wiki-section, .wiki-reflection, .wiki-actions { border: 1px solid rgba(255,255,255,.14); border-radius: 8px; background: rgba(255,255,255,.08); backdrop-filter: blur(18px); }
+.wiki-section { padding: 22px; }
+.wiki-section h3 { margin: 3px 0 12px; font-family: var(--display); font-size: 28px; font-weight: 500; }
+.wiki-section p, .wiki-section li { color: rgba(255,255,255,.76); }
+.wiki-section ol { margin: 0; padding-left: 20px; }
+.wiki-questions details { border-top: 1px solid rgba(255,255,255,.14); }
+.wiki-questions summary { padding: 14px 0; cursor: pointer; color: white; font-weight: 700; list-style: none; }
+.wiki-questions summary::-webkit-details-marker { display: none; }
+.wiki-questions details p { margin-top: 0; }
+.wiki-reflection { grid-column: 1 / -1; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 18px; }
+.wiki-reflection > span { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; background: rgba(255,255,255,.13); }
+.wiki-reflection small, .wiki-reflection strong { display: block; }
+.wiki-reflection small { color: rgba(255,255,255,.58); }
+.wiki-reflection strong { color: white; font-family: var(--display); font-size: 24px; font-weight: 500; }
+.wiki-actions { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 18px; }
+.wiki-actions small { max-width: 680px; color: rgba(255,255,255,.58); }
 .after-bridge { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: min(100%, 720px); min-height: 92px; margin: 38px auto 0; padding: 18px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--pine-deep); color: white; cursor: pointer; text-align: left; }
 .after-bridge > span { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; background: rgba(255,255,255,.14); }
 .after-bridge strong, .after-bridge small { display: block; }
@@ -704,6 +754,18 @@ input[type="range"] { width: 100%; accent-color: var(--pine); }
   .burial-layout { grid-template-columns: 1fr; }
   .burial-method-list { grid-template-columns: 1fr; max-height: 360px; }
   .burial-detail-card { position: static; }
+  .wiki-teaser { min-height: 420px; margin: -18px -14px; }
+  .burial-wiki-page { margin: -28px -14px 0; padding: 18px 14px; border-radius: 0; }
+  .wiki-hero { grid-template-columns: 1fr; gap: 22px; min-height: auto; }
+  .wiki-copy h2 { font-size: 58px; }
+  .wiki-copy blockquote { font-size: 25px; }
+  .fan-stage { height: 440px; min-height: 360px; }
+  .fan-photo { width: min(72vw, 250px); }
+  .wiki-body { grid-template-columns: 1fr; }
+  .wiki-reflection { grid-template-columns: 40px minmax(0, 1fr); }
+  .wiki-reflection .secondary-button { grid-column: 1 / -1; width: 100%; }
+  .wiki-actions { align-items: stretch; flex-direction: column; }
+  .wiki-actions .secondary-button { width: 100%; }
   .after-bridge { grid-template-columns: 42px minmax(0, 1fr) 18px; }
   .official-entry > div { grid-template-columns: 1fr; }
   .reply-form { grid-template-columns: 1fr; }

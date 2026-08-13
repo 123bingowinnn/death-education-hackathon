@@ -67,6 +67,7 @@
     activeIf: "last_year",
     wallFilter: "全部",
     burialMethods: [],
+    activeBurialSlide: 0,
     before: {
       memory: "",
       answers: {},
@@ -435,6 +436,9 @@
   }
 
   function renderBurialSummary(method) {
+    if (["sea", "tree", "sky_burial"].includes(method.id)) {
+      return renderBurialWikiTeaser(method);
+    }
     const favorite = state.before.favorites.includes(method.id);
     return `
       <span class="burial-art">${iconHtml(method.id === "sea" ? "waves" : method.id === "tree" ? "tree-pine" : "leaf")}</span>
@@ -446,6 +450,103 @@
       ${method.process?.length ? `<h4>基本流程</h4><ol>${method.process.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>` : ""}
       ${method.faq?.length ? `<h4>你可能想知道</h4><ul>${method.faq.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
       <div class="form-actions"><button class="secondary-button" type="button" data-favorite-method="${escapeAttr(method.id)}">${iconHtml(favorite ? "bookmark-check" : "bookmark")} ${favorite ? "已收藏" : "收藏到我的"}</button><button class="primary-button" type="button" data-share-method="${escapeAttr(method.id)}">${iconHtml("send")}分享到归程墙</button></div>`;
+  }
+
+  function renderBurialWikiTeaser(method) {
+    const image = method.gallery?.[0]?.url || "";
+    return `
+      <div class="wiki-teaser ${escapeAttr(method.id)}" style="--teaser-image: url('${escapeAttr(image)}')">
+        <span class="burial-art">${iconHtml(method.id === "sea" ? "waves" : method.id === "tree" ? "tree-pine" : "mountain-snow")}</span>
+        <p class="eyebrow">${escapeHtml(method.category)}</p>
+        <h3>${escapeHtml(method.name)}</h3>
+        <blockquote>${escapeHtml(method.idea)}</blockquote>
+        <p>${escapeHtml(method.mood || method.story || "")}</p>
+        <button class="primary-button" type="button" data-open-burial-wiki="${escapeAttr(method.id)}">${iconHtml("book-open")}进入二级百科</button>
+      </div>`;
+  }
+
+  function renderBurialWiki(method) {
+    const favorite = state.before.favorites.includes(method.id);
+    const gallery = method.gallery || [];
+    const active = Math.min(state.activeBurialSlide, Math.max(0, gallery.length - 1));
+    $("#if-detail").innerHTML = `
+      <section class="burial-wiki-page wiki-${escapeAttr(method.id)}">
+        <div class="wiki-atmosphere"></div>
+        <button class="back-button wiki-back" type="button" data-close-burial-wiki>${iconHtml("arrow-left")}返回安葬方式</button>
+        <div class="wiki-hero">
+          <div class="wiki-copy">
+            <p class="eyebrow">${escapeHtml(method.category)}</p>
+            <h2>${escapeHtml(method.name)}</h2>
+            <blockquote>${escapeHtml(method.idea)}</blockquote>
+            <p>${escapeHtml(method.mood || "")}</p>
+            <div class="wiki-facts"><span>费用：${escapeHtml(method.cost)}</span><span>环保性：${escapeHtml(method.eco)}</span><span>${escapeHtml(method.legal || "以当地法规为准")}</span></div>
+          </div>
+          <div class="fan-gallery" data-fan-gallery aria-label="${escapeAttr(method.name)}图片轮播">
+            <div class="fan-stage">
+              ${gallery.map((image, index) => `<button class="fan-photo ${index === active ? "is-active" : ""}" type="button" data-fan-index="${index}" aria-label="查看第 ${index + 1} 张图片"><img src="${safeUrl(image.url)}" alt="${escapeAttr(image.alt || method.name)}" loading="lazy" /></button>`).join("")}
+            </div>
+            <div class="fan-controls">
+              <button class="icon-button" type="button" data-fan-move="prev" aria-label="上一张">${iconHtml("chevron-left")}</button>
+              <div>${gallery.map((_, index) => `<span class="${index === active ? "is-active" : ""}"></span>`).join("")}</div>
+              <button class="icon-button" type="button" data-fan-move="next" aria-label="下一张">${iconHtml("chevron-right")}</button>
+            </div>
+          </div>
+        </div>
+        <div class="wiki-body">
+          <section class="wiki-section">
+            <p class="section-index">故事</p>
+            <h3>为什么它会让人觉得有意思</h3>
+            <p>${escapeHtml(method.story || "")}</p>
+          </section>
+          <section class="wiki-section">
+            <p class="section-index">源流</p>
+            <h3>它从哪里来</h3>
+            <p>${escapeHtml(method.heritage || "")}</p>
+          </section>
+          <section class="wiki-section">
+            <p class="section-index">流程</p>
+            <h3>如果现实中要了解</h3>
+            <ol>${(method.process || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>
+          </section>
+          <section class="wiki-section wiki-questions">
+            <p class="section-index">你可能想知道</p>
+            <h3>这些问题可以点开</h3>
+            ${(method.questions || []).map((item, index) => `<details ${index === 0 ? "open" : ""}><summary>${escapeHtml(item.q)}</summary><p>${escapeHtml(item.a)}</p></details>`).join("")}
+          </section>
+          <section class="wiki-reflection">
+            <span>${iconHtml("message-circle-question")}</span>
+            <div><small>引导讨论</small><strong>${escapeHtml(method.reflection || "你会怎样选择自己的告别方式？")}</strong></div>
+            <button class="secondary-button" type="button" data-share-method="${escapeAttr(method.id)}">${iconHtml("send")}发到归程墙</button>
+          </section>
+          <div class="wiki-actions">
+            <button class="secondary-button" type="button" data-favorite-method="${escapeAttr(method.id)}">${iconHtml(favorite ? "bookmark-check" : "bookmark")} ${favorite ? "已收藏" : "收藏到我的"}</button>
+            <small>${escapeHtml(method.source_note || "")}</small>
+          </div>
+        </div>
+      </section>`;
+    layoutFanGallery();
+    updateIcons();
+  }
+
+  function layoutFanGallery() {
+    const cards = $$(".fan-photo");
+    const total = cards.length;
+    if (!total) return;
+    const center = state.activeBurialSlide;
+    cards.forEach((card, index) => {
+      let distance = index - center;
+      if (distance > total / 2) distance -= total;
+      if (distance < -total / 2) distance += total;
+      const hidden = Math.abs(distance) > 3;
+      card.style.setProperty("--fan-x", `${distance * 34}px`);
+      card.style.setProperty("--fan-y", `${Math.abs(distance) * Math.abs(distance) * 7}px`);
+      card.style.setProperty("--fan-rot", `${distance * 7}deg`);
+      card.style.setProperty("--fan-scale", `${Math.max(0.72, 1 - Math.abs(distance) * 0.09)}`);
+      card.style.zIndex = String(20 - Math.abs(distance));
+      card.classList.toggle("is-active", index === center);
+      card.classList.toggle("is-hidden", hidden);
+    });
+    $$(".fan-controls span").forEach((dot, index) => dot.classList.toggle("is-active", index === center));
   }
 
   function donationCard(title, copy, icon) {
@@ -548,8 +649,37 @@
     const burialButton = event.target.closest("[data-burial-id]");
     if (burialButton) {
       state.before.answers.farewell = { ...(state.before.answers.farewell || {}), method: burialButton.dataset.burialId };
+      state.activeBurialSlide = 0;
       persistState();
       renderIfDetail();
+      return;
+    }
+    const wikiButton = event.target.closest("[data-open-burial-wiki]");
+    if (wikiButton) {
+      const method = state.burialMethods.find((item) => item.id === wikiButton.dataset.openBurialWiki);
+      if (!method) return;
+      state.activeBurialSlide = 0;
+      renderBurialWiki(method);
+      return;
+    }
+    if (event.target.closest("[data-close-burial-wiki]")) {
+      renderIfDetail();
+      return;
+    }
+    const fanPhoto = event.target.closest("[data-fan-index]");
+    if (fanPhoto) {
+      state.activeBurialSlide = Number(fanPhoto.dataset.fanIndex) || 0;
+      layoutFanGallery();
+      return;
+    }
+    const fanMove = event.target.closest("[data-fan-move]");
+    if (fanMove) {
+      const total = $$(".fan-photo").length;
+      if (!total) return;
+      state.activeBurialSlide = fanMove.dataset.fanMove === "next"
+        ? (state.activeBurialSlide + 1) % total
+        : (state.activeBurialSlide - 1 + total) % total;
+      layoutFanGallery();
       return;
     }
     const favoriteButton = event.target.closest("[data-favorite-method]");
