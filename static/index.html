@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#fffaf7" />
+    <meta
+      name="description"
+      content="归程帮助家属整理身后事办理流程，查找附近正规服务机构，并核对公开政策与价目证据。"
+    />
+    <title>归程 · 身后事数字陪同</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link rel="stylesheet" href="/static/css/toc-theme.css" />
+    <script
+      src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"
+      integrity="sha384-uTYyvsSSUZeaPhb5RbKlQa0zY/WpX/QHfvg2mczXyBQOpkWPEDy9lczyp+w7SKXu"
+      crossorigin="anonymous"
+      defer
+    ></script>
+    <script src="/static/js/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+
+    <div id="app" class="app-shell">
+      <header class="app-bar" aria-label="应用栏">
+        <button class="wordmark" id="brand-home" type="button" aria-label="回到规程">
+          <span><strong>归程</strong><small>一步一步，我们陪你</small></span>
+        </button>
+        <div class="app-bar-actions">
+          <button class="city-control" id="global-city" type="button" aria-label="更改办理城市">
+            <i data-lucide="map-pin" aria-hidden="true"></i>
+            <span>北京</span>
+          </button>
+          <button class="icon-button" id="read-page" type="button" aria-label="朗读当前页面" title="朗读当前页面" hidden>
+            <i data-lucide="volume-2" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+
+      <main id="main-content" tabindex="-1">
+        <section class="tab-page" id="tab-info" data-tab-page="info" hidden>
+          <div class="page-frame">
+            <header class="page-masthead">
+              <div>
+                <p class="eyebrow">城市互助册</p>
+                <h1>信息与求助</h1>
+                <p>当地帮助、政策与公开渠道。</p>
+              </div>
+              <span class="city-stamp"><small>当前城市</small><strong id="info-city-label">北京</strong></span>
+            </header>
+
+            <div class="section-tabs" role="tablist" aria-label="信息分类">
+              <button class="is-active" type="button" role="tab" aria-selected="true" data-info-panel="help">求助墙</button>
+              <button type="button" role="tab" aria-selected="false" data-info-panel="policy">政策福利</button>
+              <button type="button" role="tab" aria-selected="false" data-info-panel="phone">公益电话</button>
+            </div>
+
+            <section class="info-panel" id="info-help" data-info-view="help">
+              <section class="help-visual-hero">
+                <span><i data-lucide="messages-square"></i></span>
+                <div><small>社区互助</small><strong>遇到拿不准的事，可以在这里问</strong><p>材料核对、流程经验、陪同跑腿与情绪支持。</p></div>
+              </section>
+              <div class="help-topic-strip" aria-label="求助类型"><span><i data-lucide="clipboard-check"></i>材料核对</span><span><i data-lucide="route"></i>流程经验</span><span><i data-lucide="heart-handshake"></i>陪同支持</span></div>
+              <div class="section-lead">
+                <div><p class="section-index">01</p><h2>需要一双手时，来这里说</h2></div>
+                <button class="primary-button" id="open-help-dialog" type="button"><i data-lucide="square-pen"></i>发布求助</button>
+              </div>
+              <p class="privacy-line"><i data-lucide="shield-check" aria-hidden="true"></i>公开内容请勿填写真实姓名、证件号、详细住址、病历、电话或银行信息。</p>
+              <div class="feed-heading">
+                <strong>最新求助</strong>
+                <button class="icon-button" id="refresh-help" type="button" aria-label="刷新求助墙" title="刷新"><i data-lucide="refresh-cw"></i></button>
+              </div>
+              <div class="help-posts" id="help-posts" aria-live="polite"></div>
+              <p class="source-footnote">社区经验仅供参考。医疗、公安、民政和法律事项以主管部门答复为准。</p>
+            </section>
+
+            <section class="info-panel" id="info-policy" data-info-view="policy" hidden>
+              <div class="section-lead">
+                <div><p class="section-index">02</p><h2>先看是否符合，再核对当期文件</h2></div>
+              </div>
+              <div id="policy-content" aria-live="polite"></div>
+            </section>
+
+            <section class="info-panel" id="info-phone" data-info-view="phone" hidden>
+              <div class="section-lead">
+                <div><p class="section-index">03</p><h2>需要确认时，直接打给对应部门</h2></div>
+              </div>
+              <div id="phone-content" aria-live="polite"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="tab-page is-active" id="tab-process" data-tab-page="process">
+          <div class="process-view" id="process-intake">
+            <div class="page-frame questionnaire-layout">
+              <header class="questionnaire-thesis">
+                <span class="intake-illustration"><i data-lucide="hand-heart"></i></span>
+                <h1>先了解一点<br />你的情况</h1>
+                <p>只需要回答三个问题。所有信息仅用于整理指引，我们会严格保密。</p>
+              </header>
+
+              <div class="questionnaire-stage">
+                <div class="question-progress" id="question-progress" aria-label="问卷进度"></div>
+                <article class="question-card" id="question-card" aria-live="polite"></article>
+                <p class="form-error" id="question-error" role="alert" hidden></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="process-view generating-view" id="process-generating" hidden>
+            <div class="generating-content" role="status" aria-live="polite">
+              <div class="generating-thread" aria-hidden="true">
+                <span></span><i></i><span></span><i></i><span></span>
+              </div>
+              <p class="eyebrow">归程正在整理</p>
+              <h1>正在生成办理顺序</h1>
+              <p>根据地点、费用需求与办理城市，准备接下来要做的事。</p>
+              <ol class="generating-steps">
+                <li class="is-active"><i data-lucide="circle-check"></i>确认地点对应路径</li>
+                <li><i data-lucide="loader-circle"></i>整理材料与风险提示</li>
+                <li><i data-lucide="circle"></i>准备当地机构核验</li>
+              </ol>
+            </div>
+          </div>
+
+          <div class="process-view" id="process-home" hidden>
+            <div class="page-frame process-home-frame">
+              <header class="home-heading">
+                <div><h1>先把眼前这件事办好</h1><p>一步一步，我们陪你。</p></div>
+                <button id="home-customize" type="button"><i data-lucide="sliders-horizontal"></i>重新定制</button>
+              </header>
+              <section class="current-action-card">
+                <div class="current-action-copy">
+                  <small>此刻先做：</small>
+                  <h2 id="home-current-title">联系医院，确认死亡证明由谁开具</h2>
+                  <button class="primary-button" id="home-current-action" type="button">查看怎么做<i data-lucide="chevron-right"></i></button>
+                </div>
+                <span class="current-action-illustration" aria-hidden="true"><i data-lucide="hospital"></i><i data-lucide="hand-heart"></i></span>
+              </section>
+              <section class="home-progress-section">
+                <div class="home-section-heading"><h2>当前进度</h2><button id="home-view-all" type="button">查看全部<i data-lucide="chevron-right"></i></button></div>
+                <div class="home-progress" id="home-progress" aria-label="五步办理进度"></div>
+              </section>
+              <button class="companion-note" type="button" data-tab="info"><i data-lucide="hand-heart"></i><span>如果需要帮助，可以找家人或信任的人一起商量。</span><i data-lucide="chevron-right"></i></button>
+              <section class="home-next-section">
+                <div class="home-section-heading"><h2>接下来</h2></div>
+                <div id="home-next-list"></div>
+              </section>
+            </div>
+          </div>
+
+          <div class="process-view" id="process-overview" hidden>
+            <div class="overview-band">
+              <div class="page-frame overview-heading">
+                <button class="overview-back" id="overview-back" type="button" aria-label="返回规程首页"><i data-lucide="arrow-left"></i></button>
+                <div>
+                  <h1>接下来要做的 5 件事</h1>
+                  <p id="flow-context">正在整理当前情况</p>
+                </div>
+                <div class="progress-dial" aria-live="polite">
+                  <span>步骤</span><strong id="progress-count">0/5</strong>
+                </div>
+              </div>
+              <div class="page-frame"><div class="progress-track" aria-hidden="true"><span id="progress-bar"></span></div></div>
+            </div>
+            <div class="page-frame overview-body">
+              <div class="flow-path" id="flow-path" aria-label="五步办理路径"></div>
+              <div class="next-action" id="next-action">
+                <span><i data-lucide="corner-down-right"></i></span>
+                <div><small>建议下一步</small><strong id="next-action-text">查看第 1 步</strong></div>
+                <button class="secondary-button" id="open-next-node" type="button">查看</button>
+              </div>
+              <section class="evidence-band">
+                <i data-lucide="scan-search" aria-hidden="true"></i>
+                <div><strong>机构与价格，在第 3 步实时核验</strong><p>高德计算距离，Kimi 打开政府来源核对机构与公开价目；证据不可比时不会声称“最便宜”。</p></div>
+                <button class="text-link-button" type="button" data-open-node="facility">去核验<i data-lucide="arrow-up-right"></i></button>
+              </section>
+              <button class="quiet-button restart-flow" id="restart-flow" type="button"><i data-lucide="rotate-ccw"></i>重新填写情况</button>
+            </div>
+          </div>
+
+          <div class="process-view" id="process-detail" hidden>
+            <div class="detail-hero">
+              <div class="page-frame detail-hero-inner">
+                <div class="detail-nav"><button class="back-button" id="back-to-overview" type="button" aria-label="返回五步规程"><i data-lucide="arrow-left"></i></button><span id="detail-step-label">步骤 1 / 5</span></div>
+                <div class="detail-heading-grid">
+                  <div class="detail-orbit" id="detail-orbit" aria-hidden="true"><i data-lucide="file-check-2"></i><span></span></div>
+                  <div>
+                    <p class="eyebrow" id="detail-kicker">节点 1 / 5</p>
+                    <h1 id="detail-title">确认死亡与性质</h1>
+                    <p id="detail-intro"></p>
+                    <div class="detail-facts" id="detail-facts"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="page-frame detail-layout">
+              <div class="detail-main" id="detail-main"></div>
+              <aside class="detail-side" id="detail-side"></aside>
+            </div>
+            <div class="complete-bar">
+              <div><strong id="complete-label">这一步办完了吗？</strong><small>可随时回来修改</small></div>
+              <button class="primary-button" id="toggle-node-complete" type="button"><i data-lucide="circle-check"></i>这一步已经办好</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="tab-page" id="tab-profile" data-tab-page="profile" hidden>
+          <div class="profile-view" id="profile-home">
+            <div class="page-frame">
+              <header class="page-masthead profile-masthead">
+                <div><p class="eyebrow">个人空间</p><h1>我的</h1><p id="profile-storage-note">访客进度保存在本机，登录后可保存到本地账户。</p></div>
+              </header>
+
+              <section class="identity-panel">
+                <span class="avatar" id="profile-avatar">访</span>
+                <div><strong id="profile-name">访客用户</strong><small id="profile-state">当前为本机访客模式</small></div>
+                <button class="secondary-button" id="login-button" type="button">登录</button>
+              </section>
+
+              <div class="profile-stats" aria-label="我的办理数据">
+                <div><strong id="stat-progress">0/5</strong><span>完成节点</span></div>
+                <div><strong id="stat-materials">0</strong><span>核对材料</span></div>
+              </div>
+
+              <section class="settings-section">
+                <div class="settings-heading"><p class="section-index">01</p><h2>我的内容</h2></div>
+                <button class="settings-row" type="button" data-profile-action="progress"><span><i data-lucide="route"></i><strong>办理进度</strong></span><small id="progress-row-label">尚未生成</small><i data-lucide="chevron-right"></i></button>
+              </section>
+
+              <section class="settings-section">
+                <div class="settings-heading"><p class="section-index">02</p><h2>个人设置</h2></div>
+                <button class="settings-row" id="profile-city" type="button"><span><i data-lucide="map-pin"></i><strong>办理城市</strong></span><small>北京</small><i data-lucide="chevron-right"></i></button>
+                <div class="settings-row version-row">
+                  <span><i data-lucide="scan-text"></i><strong>显示版本</strong></span>
+                  <div class="mini-segment" role="radiogroup" aria-label="显示版本">
+                    <button class="is-active" type="button" role="radio" aria-checked="true" data-mode="standard">普通</button>
+                    <button type="button" role="radio" aria-checked="false" data-mode="elder">老年</button>
+                  </div>
+                </div>
+                <label class="settings-row toggle-row" for="tap-speech">
+                  <span><i data-lucide="audio-lines"></i><span><strong>点按文字朗读</strong><small>老年版默认开启</small></span></span>
+                  <input id="tap-speech" type="checkbox" role="switch" />
+                </label>
+              </section>
+
+              <section class="settings-section">
+                <div class="settings-heading"><p class="section-index">03</p><h2>账户与数据</h2></div>
+                <button class="settings-row" id="logout-button" type="button" hidden><span><i data-lucide="log-out"></i><strong>退出登录</strong></span><i data-lucide="chevron-right"></i></button>
+                <button class="settings-row danger-row" id="clear-local-data" type="button"><span><i data-lucide="trash-2"></i><strong>清除本机进度</strong></span><i data-lucide="chevron-right"></i></button>
+                <div class="privacy-summary"><i data-lucide="lock-keyhole"></i><p>密码经过加盐哈希保存。定位与联网核验结果不会同步到账户。</p></div>
+              </section>
+            </div>
+          </div>
+
+          <div class="profile-view" id="profile-portrait" hidden>
+            <div class="page-frame portrait-page">
+              <button class="back-button light-back" id="back-profile" type="button"><i data-lucide="arrow-left"></i>返回我的</button>
+              <header class="portrait-heading"><p class="eyebrow">本机工具</p><h1>照片整理</h1><p>完成裁剪与黑白处理，照片不会上传。</p></header>
+              <div class="portrait-workspace">
+                <div class="portrait-preview-wrap">
+                  <canvas id="portrait-canvas" width="840" height="1120" aria-label="照片预览"></canvas>
+                  <div class="portrait-empty" id="portrait-empty"><i data-lucide="image-plus"></i><strong>选择一张正面照片</strong><span>JPG、PNG 或 WebP，15MB 以内</span></div>
+                </div>
+                <div class="portrait-controls">
+                  <label class="upload-button" for="portrait-file"><i data-lucide="upload"></i>选择照片</label>
+                  <input id="portrait-file" class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" />
+                  <fieldset><legend>色彩</legend><div class="mini-segment wide-segment"><button class="is-active" type="button" data-filter="color">自然</button><button type="button" data-filter="grayscale">黑白</button></div></fieldset>
+                  <label>照片大小<input id="portrait-zoom" type="range" min="1" max="2.5" step="0.01" value="1" /></label>
+                  <label>上下位置<input id="portrait-y" type="range" min="-0.5" max="0.5" step="0.01" value="0" /></label>
+                  <button class="primary-button" id="download-portrait" type="button" disabled><i data-lucide="download"></i>下载照片</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="主导航">
+        <div>
+          <button type="button" data-tab="info"><i data-lucide="messages-square"></i><span>信息</span></button>
+          <button class="is-active" type="button" data-tab="process"><i data-lucide="route"></i><span>规程</span></button>
+          <button type="button" data-tab="profile"><i data-lucide="user-round"></i><span>我的</span></button>
+        </div>
+      </nav>
+
+      <dialog class="app-dialog" id="help-dialog" aria-labelledby="help-dialog-title">
+        <form method="dialog" class="dialog-close-row"><button class="icon-button" value="cancel" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button></form>
+        <form id="help-form" class="dialog-form">
+          <p class="eyebrow">社区互助</p><h2 id="help-dialog-title">发布一条求助</h2>
+          <p class="privacy-line"><i data-lucide="shield-check"></i>不要填写真实姓名、证件号、详细住址、病历、电话或银行信息。</p>
+          <label>称呼<input name="alias" type="text" maxlength="20" value="一位家属" required /></label>
+          <label>需要哪类帮助<select name="topic"><option>跑腿陪同</option><option>流程经验</option><option>材料核对</option><option>情绪支持</option><option>其他</option></select></label>
+          <label>想说的话<textarea name="content" minlength="4" maxlength="280" rows="5" placeholder="例如：第一次办理，想请有经验的人帮我核对材料清单。" required></textarea></label>
+          <p class="form-error" id="help-error" role="alert" hidden></p>
+          <button class="primary-button" type="submit"><i data-lucide="send"></i>发布求助</button>
+        </form>
+      </dialog>
+
+      <dialog class="app-dialog compact-dialog" id="city-dialog" aria-labelledby="city-dialog-title">
+        <form method="dialog" class="dialog-close-row"><button class="icon-button" value="cancel" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button></form>
+        <form id="city-form" class="dialog-form">
+          <p class="eyebrow">办理地点</p><h2 id="city-dialog-title">更改办理城市</h2>
+          <label>城市<input id="city-input" name="city" type="text" maxlength="30" value="北京" autocomplete="address-level2" required /></label>
+          <p>非北京城市会显示通用政务渠道；机构位置可用高德查询，价格仍以打开的当地官方来源为准。</p>
+          <button class="primary-button" type="submit">保存城市</button>
+        </form>
+      </dialog>
+
+      <dialog class="app-dialog compact-dialog" id="login-dialog" aria-labelledby="login-dialog-title">
+        <form method="dialog" class="dialog-close-row"><button class="icon-button" value="cancel" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button></form>
+        <form id="login-form" class="dialog-form">
+          <p class="eyebrow">归程账户</p><h2 id="login-dialog-title">登录</h2>
+          <div class="auth-tabs" role="tablist"><button class="is-active" type="button" role="tab" data-auth-mode="login">登录</button><button type="button" role="tab" data-auth-mode="register">注册</button></div>
+          <label class="register-only" hidden>怎么称呼您<input id="profile-alias" name="display_name" type="text" maxlength="20" placeholder="例如：李女士" /></label>
+          <label>邮箱<input name="email" type="email" maxlength="120" autocomplete="email" required /></label>
+          <label>密码<input name="password" type="password" minlength="8" maxlength="128" autocomplete="current-password" required /></label>
+          <p class="form-error" id="auth-error" role="alert" hidden></p>
+          <p>账户与办理进度保存在这台电脑的本地数据库。</p>
+          <button class="primary-button" type="submit">登录</button>
+        </form>
+      </dialog>
+
+      <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+    </div>
+  </body>
+</html>

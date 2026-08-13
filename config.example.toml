@@ -1,0 +1,12 @@
+[llm]
+api_key = ""
+model = "kimi-k2.6"
+endpoint = "https://api.moonshot.cn/v1"
+
+[amap]
+api_key = ""
+endpoint = "https://restapi.amap.com"
+
+[app]
+default_city = "北京"
+recommendation_cache_seconds = 1800

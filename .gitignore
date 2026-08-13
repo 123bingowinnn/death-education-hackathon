@@ -1,0 +1,11 @@
+.env
+config.toml
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+data/help_wall.json
+data/*.db
+data/*.db-shm
+data/*.db-wal
+tmp/
