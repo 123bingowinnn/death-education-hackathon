@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from config_loader import BASE_DIR, settings
 from auth_store import AuthStore
-from content import BUDGET_LABELS, PLACE_ROUTES, build_flow, city_content, social_relief
+from content import BUDGET_LABELS, PLACE_ROUTES, burial_method, burial_methods, build_flow, city_content, social_relief
 from services.amap_client import AmapClient, AmapError
 from services.kimi_client import KimiClient, KimiError
 
@@ -86,7 +86,8 @@ class LocationNormalizeRequest(BaseModel):
 class HelpPostRequest(BaseModel):
     alias: str = Field(default="一位家属", min_length=1, max_length=20)
     city: str = Field(default=settings.default_city, min_length=1, max_length=30)
-    topic: Literal["跑腿陪同", "流程经验", "材料核对", "情绪支持", "其他"]
+    type: Literal["那一天", "如果①", "如果②", "如果③", "如果④", "如果⑤", "求助", "哀思"] = "求助"
+    topic: str = Field(default="其他", min_length=1, max_length=20)
     content: str = Field(min_length=4, max_length=280)
 
     @field_validator("alias", "city", "content")
@@ -137,6 +138,20 @@ class ProgressRequest(BaseModel):
     completed: List[str] = Field(default_factory=list, max_length=20)
     checks: Dict[str, List[int]] = Field(default_factory=dict)
     mode: Literal["standard", "elder"] = "standard"
+
+
+class AdvanceDirectiveRequest(BaseModel):
+    cpr: str = Field(min_length=1, max_length=30)
+    ventilator: str = Field(min_length=1, max_length=30)
+    feeding: str = Field(min_length=1, max_length=30)
+    irreversible: str = Field(min_length=1, max_length=40)
+    place: str = Field(min_length=1, max_length=30)
+    note: str = Field(default="", max_length=240)
+
+    @field_validator("cpr", "ventilator", "feeding", "irreversible", "place", "note")
+    @classmethod
+    def clean_directive_text(cls, value: str) -> str:
+        return " ".join(value.split())
 
 
 @app.get("/")
@@ -646,7 +661,39 @@ async def create_help_post(payload: HelpPostRequest, guicheng_session: Optional[
         raise HTTPException(status_code=400, detail="内容中可能包含电话或身份证号，请删除后再发布")
     user = auth_store.user_for_session(guicheng_session)
     alias = user["display_name"] if user else payload.alias
-    return await asyncio.to_thread(auth_store.create_help_post, user["id"] if user else None, alias, payload.city, payload.topic, payload.content)
+    return await asyncio.to_thread(auth_store.create_help_post, user["id"] if user else None, alias, payload.city, payload.topic, payload.content, payload.type)
+
+
+@app.get("/api/wall/posts")
+async def wall_posts(
+    type: str = Query(default="全部", max_length=20),
+) -> dict[str, Any]:
+    posts = await asyncio.to_thread(auth_store.list_help_posts)
+    if type != "全部":
+        posts = [
+            post
+            for post in posts
+            if post.get("type") == type or post.get("topic") == type
+        ]
+    return {
+        "posts": posts,
+        "filters": ["全部", "那一天", "如果①", "如果②", "如果③", "如果④", "如果⑤", "求助", "哀思"],
+        "privacy_notice": "请勿发布姓名、身份证号、住址、病历、电话或银行信息。",
+    }
+
+
+@app.post("/api/wall/posts", status_code=201)
+async def create_wall_post(payload: HelpPostRequest, guicheng_session: Optional[str] = Cookie(default=None)) -> dict[str, Any]:
+    return await create_help_post(payload, guicheng_session)
+
+
+@app.get("/api/wall/posts/{post_id}/replies")
+async def wall_replies(post_id: str) -> dict[str, Any]:
+    posts = await asyncio.to_thread(auth_store.list_help_posts)
+    post = next((item for item in posts if item["id"] == post_id), None)
+    if not post:
+        raise HTTPException(status_code=404, detail="这条帖子不存在或已被移除")
+    return {"replies": post.get("replies", [])}
 
 
 @app.post("/api/help-wall/{post_id}/replies", status_code=201)
@@ -662,6 +709,52 @@ async def create_help_reply(post_id: str, payload: HelpReplyRequest, guicheng_se
         return await asyncio.to_thread(auth_store.create_help_reply, int(match.group(1)), user["id"] if user else None, alias, payload.content)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/wall/posts/{post_id}/replies", status_code=201)
+async def create_wall_reply(post_id: str, payload: HelpReplyRequest, guicheng_session: Optional[str] = Cookie(default=None)) -> dict[str, Any]:
+    return await create_help_reply(post_id, payload, guicheng_session)
+
+
+@app.get("/api/burial-methods")
+async def burial_method_list() -> dict[str, Any]:
+    return {"methods": burial_methods()}
+
+
+@app.get("/api/burial-methods/{method_id}")
+async def burial_method_detail(method_id: str) -> dict[str, Any]:
+    item = burial_method(method_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="未找到这种安葬方式")
+    return item
+
+
+@app.post("/api/advance-directive")
+async def advance_directive(payload: AdvanceDirectiveRequest) -> dict[str, Any]:
+    if _contains_sensitive_pattern(payload.note):
+        raise HTTPException(status_code=400, detail="补充说明中可能包含联系方式或证件号，请删除后再生成")
+    text = "\n".join(
+        [
+            "生前医疗意愿草稿",
+            "",
+            "我在意识清醒时，对生命末期医疗照护表达如下意愿：",
+            f"1. 心肺复苏：{payload.cpr}。",
+            f"2. 呼吸机维持生命：{payload.ventilator}。",
+            f"3. 管饲营养：{payload.feeding}。",
+            f"4. 当病情不可逆转时：{payload.irreversible}。",
+            f"5. 我希望在{payload.place}度过最后时光。",
+            f"6. 其他说明：{payload.note or '暂无'}。",
+            "",
+            "我理解这份文本主要用于帮助家人与医护人员了解我的偏好。中国大陆生前预嘱的法律效力仍以当地现行法规和医疗机构规则为准，建议与家人充分沟通并咨询专业人士。",
+            "",
+            "签名：__________    日期：__________",
+        ]
+    )
+    return {
+        "text": text,
+        "generated_at": int(time.time()),
+        "legal_notice": "仅为可打印的意愿草稿，不替代正式法律文件或医疗决定。",
+    }
 
 
 async def _read_posts() -> list[dict[str, Any]]:

@@ -51,6 +51,7 @@ class AuthStore:
                     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                     alias TEXT NOT NULL,
                     city TEXT NOT NULL,
+                    post_type TEXT NOT NULL DEFAULT '求助',
                     topic TEXT NOT NULL,
                     content TEXT NOT NULL,
                     created_at INTEGER NOT NULL
@@ -66,13 +67,22 @@ class AuthStore:
                 CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions(expires_at);
                 """
             )
+            columns = {
+                row["name"]
+                for row in db.execute("PRAGMA table_info(help_posts)").fetchall()
+            }
+            if "post_type" not in columns:
+                db.execute(
+                    "ALTER TABLE help_posts ADD COLUMN post_type TEXT NOT NULL DEFAULT '求助'"
+                )
             existing_posts = db.execute("SELECT COUNT(*) FROM help_posts").fetchone()[0]
             if existing_posts == 0:
                 db.execute(
-                    "INSERT INTO help_posts(user_id, alias, city, topic, content, created_at) VALUES(NULL,?,?,?,?,?)",
+                    "INSERT INTO help_posts(user_id, alias, city, post_type, topic, content, created_at) VALUES(NULL,?,?,?,?,?,?)",
                     (
                         "归程志愿者",
                         "北京",
+                        "求助",
                         "材料核对",
                         "可以帮你把要带的材料按办理地点再核对一遍。请不要在这里留下证件号码或联系电话。",
                         int(time.time()),
@@ -165,15 +175,15 @@ class AuthStore:
             result = []
             for row in rows:
                 replies = db.execute("SELECT * FROM help_replies WHERE post_id = ? ORDER BY created_at", (row["id"],)).fetchall()
-                result.append({"id": f"post-{row['id']}", "alias": row["alias"], "city": row["city"], "topic": row["topic"], "content": row["content"], "created_at": row["created_at"], "replies": [{"id": f"reply-{item['id']}", "alias": item["alias"], "content": item["content"], "created_at": item["created_at"]} for item in replies]})
+                result.append({"id": f"post-{row['id']}", "alias": row["alias"], "city": row["city"], "type": row["post_type"], "topic": row["topic"], "content": row["content"], "created_at": row["created_at"], "replies": [{"id": f"reply-{item['id']}", "alias": item["alias"], "content": item["content"], "created_at": item["created_at"]} for item in replies]})
         return result
 
-    def create_help_post(self, user_id: int | None, alias: str, city: str, topic: str, content: str) -> dict[str, Any]:
+    def create_help_post(self, user_id: int | None, alias: str, city: str, topic: str, content: str, post_type: str = "求助") -> dict[str, Any]:
         now = int(time.time())
         with self._connect() as db:
-            cursor = db.execute("INSERT INTO help_posts(user_id, alias, city, topic, content, created_at) VALUES(?,?,?,?,?,?)", (user_id, alias, city, topic, content, now))
+            cursor = db.execute("INSERT INTO help_posts(user_id, alias, city, post_type, topic, content, created_at) VALUES(?,?,?,?,?,?,?)", (user_id, alias, city, post_type, topic, content, now))
             post_id = int(cursor.lastrowid)
-        return {"id": f"post-{post_id}", "alias": alias, "city": city, "topic": topic, "content": content, "created_at": now, "replies": []}
+        return {"id": f"post-{post_id}", "alias": alias, "city": city, "type": post_type, "topic": topic, "content": content, "created_at": now, "replies": []}
 
     def create_help_reply(self, post_id: int, user_id: int | None, alias: str, content: str) -> dict[str, Any]:
         now = int(time.time())

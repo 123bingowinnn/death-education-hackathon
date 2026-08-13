@@ -39,6 +39,21 @@
     burial: "先确认合规寄存方式，不需要在当天做长期决定",
     accounts: "先列好资产、债务和账户清单，再逐项办理",
   };
+  const WALL_FILTERS = ["全部", "那一天", "如果①", "如果②", "如果③", "如果④", "如果⑤", "求助", "哀思"];
+  const IF_CARDS = [
+    { id: "last_year", type: "如果①", title: "如果这是最后一年", quote: "Before I go I want to ___", action: "写下", icon: "calendar-heart", tone: "violet" },
+    { id: "farewell", type: "如果②", title: "如果你可以选择告别方式", quote: "海葬 · 树葬 · 太空葬...", action: "选择", icon: "waves", tone: "rose" },
+    { id: "donation", type: "如果③", title: "如果你的离开可以拯救他人", quote: "你的离开，可以是另一个人的重生", action: "了解", icon: "heart-pulse", tone: "cyan" },
+    { id: "directive", type: "如果④", title: "如果有一天你无法为自己说话", quote: "你希望医生怎么做？", action: "思考", icon: "clipboard-list", tone: "mauve" },
+    { id: "message", type: "如果⑤", title: "如果你还能对某个人说一句话", quote: "你有没有什么话没来得及说？", action: "留言", icon: "message-heart", tone: "gold" },
+  ];
+  const DIRECTIVE_FIELDS = [
+    { name: "cpr", label: "生命末期，是否接受心肺复苏？", options: ["希望", "不希望", "由家人决定"] },
+    { name: "ventilator", label: "是否使用呼吸机维持生命？", options: ["希望", "不希望", "仅在可能恢复时使用"] },
+    { name: "feeding", label: "是否接受管饲营养？", options: ["希望", "不希望", "仅在能改善生活质量时使用"] },
+    { name: "irreversible", label: "如果不可逆转，你希望...", options: ["尽一切努力延长生命", "放弃过度治疗注重舒适", "不确定"] },
+    { name: "place", label: "你希望在哪里度过最后时光？", options: ["家里", "医院", "临终关怀机构", "不确定"] },
+  ];
 
   let recommendationRequestId = 0;
   let flowRequestId = 0;
@@ -48,7 +63,17 @@
   let accountSaveTimer = null;
 
   const state = {
-    activeTab: "process",
+    activeTab: "before",
+    activeIf: "last_year",
+    wallFilter: "全部",
+    burialMethods: [],
+    before: {
+      memory: "",
+      answers: {},
+      favorites: [],
+      directiveText: "",
+      published: [],
+    },
     processView: "intake",
     questionStep: 0,
     legalConfirmed: false,
@@ -97,7 +122,17 @@
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
       if (!stored || typeof stored !== "object") return;
-      state.activeTab = ["info", "process", "profile"].includes(stored.activeTab) ? stored.activeTab : "process";
+      const migratedTab = stored.activeTab === "info" ? "wall" : stored.activeTab;
+      state.activeTab = ["before", "process", "wall", "profile"].includes(migratedTab) ? migratedTab : "before";
+      state.activeIf = IF_CARDS.some((card) => card.id === stored.activeIf) ? stored.activeIf : "last_year";
+      state.wallFilter = WALL_FILTERS.includes(stored.wallFilter) ? stored.wallFilter : "全部";
+      if (stored.before && typeof stored.before === "object") {
+        state.before.memory = typeof stored.before.memory === "string" ? stored.before.memory.slice(0, 280) : "";
+        state.before.answers = stored.before.answers && typeof stored.before.answers === "object" ? stored.before.answers : {};
+        state.before.favorites = Array.isArray(stored.before.favorites) ? stored.before.favorites.filter((item) => typeof item === "string") : [];
+        state.before.directiveText = typeof stored.before.directiveText === "string" ? stored.before.directiveText.slice(0, 3000) : "";
+        state.before.published = Array.isArray(stored.before.published) ? stored.before.published : [];
+      }
       state.mode = stored.mode === "elder" ? "elder" : "standard";
       state.tapSpeech = Boolean(stored.tapSpeech);
       state.profileAlias = typeof stored.profileAlias === "string" ? stored.profileAlias.slice(0, 12) : "";
@@ -121,6 +156,9 @@
   function persistState() {
     const serializable = {
       activeTab: state.activeTab,
+      activeIf: state.activeIf,
+      wallFilter: state.wallFilter,
+      before: state.before,
       mode: state.mode,
       tapSpeech: state.tapSpeech,
       profileAlias: state.profileAlias,
@@ -140,7 +178,17 @@
     $$('[data-tab]').forEach((button) => button.addEventListener("click", () => showTab(button.dataset.tab)));
     $$('[data-info-panel]').forEach((button) => button.addEventListener("click", () => showInfoPanel(button.dataset.infoPanel)));
     $$('[data-mode]').forEach((button) => button.addEventListener("click", () => setMode(button.dataset.mode)));
-    $("#brand-home").addEventListener("click", () => showTab("process"));
+    $("#brand-home").addEventListener("click", () => showTab("before"));
+    $("#memory-form").addEventListener("submit", submitMemory);
+    $("#memory-skip").addEventListener("click", () => {
+      $("#if-section-title").scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+    });
+    $("#if-carousel").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-if-id]");
+      if (button) selectIfCard(button.dataset.ifId);
+    });
+    $("#if-detail").addEventListener("submit", handleBeforeSubmit);
+    $("#if-detail").addEventListener("click", handleBeforeDetailClick);
     $("#global-city").addEventListener("click", openCityDialog);
     $("#profile-city").addEventListener("click", openCityDialog);
     $("#city-form").addEventListener("submit", submitCity);
@@ -180,6 +228,14 @@
     $("#refresh-help").addEventListener("click", loadHelpWall);
     $("#help-form").addEventListener("submit", submitHelpPost);
     $("#help-posts").addEventListener("submit", submitHelpReply);
+    $("#wall-filters").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-wall-filter]");
+      if (!button) return;
+      state.wallFilter = button.dataset.wallFilter;
+      persistState();
+      renderWallFilters();
+      loadHelpWall();
+    });
     $("#login-button").addEventListener("click", () => {
       setAuthMode("login");
       openDialog("#login-dialog");
@@ -209,6 +265,15 @@
         showProcessView("overview");
         renderOverview();
       }
+    } else if (action === "before") {
+      showTab("before");
+      renderBefore();
+    } else if (action === "favorites") {
+      showTab("before");
+      selectIfCard("farewell");
+    } else if (action === "directive") {
+      showTab("before");
+      selectIfCard("directive");
     } else if (action === "portrait") {
       $("#profile-home").hidden = true;
       $("#profile-portrait").hidden = false;
@@ -224,9 +289,9 @@
   }
 
   function showTab(name, focus = true) {
-    if (!["info", "process", "profile"].includes(name)) return;
+    if (!["before", "process", "wall", "profile"].includes(name)) return;
     state.activeTab = name;
-    $("#app").classList.remove("tab-info", "tab-process", "tab-profile");
+    $("#app").classList.remove("tab-before", "tab-process", "tab-wall", "tab-profile");
     $("#app").classList.add(`tab-${name}`);
     $$('[data-tab-page]').forEach((page) => {
       const active = page.dataset.tabPage === name;
@@ -238,7 +303,8 @@
       button.classList.toggle("is-active", active);
       button.setAttribute("aria-current", active ? "page" : "false");
     });
-    if (name === "info") loadInfoPanel();
+    if (name === "before") renderBefore();
+    if (name === "wall") loadInfoPanel();
     if (name === "profile") updateProfile();
     persistState();
     if (focus) {
@@ -263,6 +329,268 @@
     const active = $('[data-info-panel].is-active')?.dataset.infoPanel || "help";
     if (active === "help") loadHelpWall();
     if (active === "policy" || active === "phone") loadCommunityInfo();
+  }
+
+  function renderBefore() {
+    $("#memory-input").value = state.before.memory || "";
+    renderIfCarousel();
+    renderIfDetail();
+  }
+
+  function renderIfCarousel() {
+    $("#if-carousel").innerHTML = IF_CARDS.map((card) => `
+      <button class="if-card tone-${escapeAttr(card.tone)} ${state.activeIf === card.id ? "is-active" : ""}" type="button" data-if-id="${escapeAttr(card.id)}">
+        <span>${iconHtml(card.icon)}</span>
+        <small>${escapeHtml(card.type)}</small>
+        <strong>${escapeHtml(card.title)}</strong>
+        <em>${escapeHtml(card.quote)}</em>
+        <b>${escapeHtml(card.action)}${iconHtml("arrow-right")}</b>
+      </button>
+    `).join("");
+    $("#if-dots").innerHTML = IF_CARDS.map((card) => `<span class="${state.activeIf === card.id ? "is-active" : ""}"></span>`).join("");
+    updateIcons();
+  }
+
+  function selectIfCard(id) {
+    if (!IF_CARDS.some((card) => card.id === id)) return;
+    state.activeIf = id;
+    persistState();
+    renderIfCarousel();
+    renderIfDetail();
+    $("#if-detail").scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  }
+
+  function renderIfDetail() {
+    const card = IF_CARDS.find((item) => item.id === state.activeIf) || IF_CARDS[0];
+    const answer = state.before.answers[card.id] || {};
+    if (card.id === "last_year") {
+      $("#if-detail").innerHTML = `
+        <div class="if-detail-head"><button class="back-button" type="button" data-if-back>${iconHtml("arrow-left")}回到卡片</button><p class="eyebrow">${card.type}</p><h2>${card.title}</h2><p>选一句最接近你的开头，写完可以发布到归程墙，也可以只留在本机。</p></div>
+        <form class="before-form" data-before-kind="last_year">
+          <label>句式<select name="prompt">
+            ${["Before I go I want to", "Before I go I want to tell ___ that", "If I could choose my farewell, I would want", "Death used to scare me, but now"].map((item) => `<option ${answer.prompt === item ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}
+          </select></label>
+          <label>你的回答<textarea name="content" minlength="2" maxlength="220" rows="4" placeholder="例如：带爸妈去看一次极光。">${escapeHtml(answer.content || "")}</textarea></label>
+          <div class="form-actions"><button class="primary-button" name="publish" value="1" type="submit">${iconHtml("send")}发布到归程墙</button><button class="secondary-button" type="submit">${iconHtml("save")}仅保存到我的</button></div>
+        </form>`;
+    } else if (card.id === "farewell") {
+      renderBurialExplorer(answer);
+    } else if (card.id === "donation") {
+      $("#if-detail").innerHTML = `
+        <div class="if-detail-head"><button class="back-button" type="button" data-if-back>${iconHtml("arrow-left")}回到卡片</button><p class="eyebrow">${card.type}</p><h2>${card.title}</h2><p>这里只提供信息，不替你决定，也不会保存你的捐赠选择。</p></div>
+        <div class="donation-grid">
+          ${donationCard("器官捐赠", "了解心、肝、肾、肺等器官捐献的意义、条件与登记方式。", "heart-pulse")}
+          ${donationCard("眼角膜捐赠", "常见组织捐献之一，可能帮助他人重新看见世界。", "eye")}
+          ${donationCard("遗体捐赠", "为医学教育和研究做最后的贡献。", "graduation-cap")}
+        </div>
+        <form class="before-form" data-before-kind="donation">
+          <label>如果你登记了，你会告诉家人吗？<textarea name="content" maxlength="220" rows="3" placeholder="可以写下你的想法，也可以空着。">${escapeHtml(answer.content || "")}</textarea></label>
+          <div class="form-actions"><button class="primary-button" name="publish" value="1" type="submit">${iconHtml("send")}发布讨论</button><button class="secondary-button" type="submit">${iconHtml("save")}仅保存</button></div>
+        </form>`;
+    } else if (card.id === "directive") {
+      $("#if-detail").innerHTML = `
+        <div class="if-detail-head"><button class="back-button" type="button" data-if-back>${iconHtml("arrow-left")}回到卡片</button><p class="eyebrow">${card.type}</p><h2>${card.title}</h2><p>选择只用于生成本机草稿，不会发布或上传。</p></div>
+        <form class="directive-form" data-before-kind="directive">
+          ${DIRECTIVE_FIELDS.map((field) => `<fieldset><legend>${escapeHtml(field.label)}</legend><div class="choice-row">${field.options.map((option) => `<label><input type="radio" name="${escapeAttr(field.name)}" value="${escapeAttr(option)}" ${answer[field.name] === option ? "checked" : ""} required /><span>${escapeHtml(option)}</span></label>`).join("")}</div></fieldset>`).join("")}
+          <label>补充说明（可选）<textarea name="note" maxlength="240" rows="3" placeholder="例如：希望优先缓解疼痛，给家人留出告别时间。">${escapeHtml(answer.note || "")}</textarea></label>
+          <p class="privacy-line">${iconHtml("lock-keyhole")}生成文本仅保存在本机“我的”，不上传到归程墙。</p>
+          <button class="primary-button" type="submit">${iconHtml("file-text")}生成预嘱草稿</button>
+        </form>
+        ${state.before.directiveText ? `<pre class="directive-output">${escapeHtml(state.before.directiveText)}</pre>` : ""}`;
+    } else {
+      $("#if-detail").innerHTML = `
+        <div class="if-detail-head"><button class="back-button" type="button" data-if-back>${iconHtml("arrow-left")}回到卡片</button><p class="eyebrow">${card.type}</p><h2>${card.title}</h2><p>选择一个对象，写一句你想留下的话。</p></div>
+        <form class="before-form" data-before-kind="message">
+          <label>说给谁<select name="target">${["父母", "伴侣", "孩子", "朋友", "自己"].map((item) => `<option ${answer.target === item ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}</select></label>
+          <label>那句话<textarea name="content" minlength="2" maxlength="220" rows="4" placeholder="例如：妈妈，对不起，也谢谢你。">${escapeHtml(answer.content || "")}</textarea></label>
+          <div class="form-actions"><button class="primary-button" name="publish" value="1" type="submit">${iconHtml("send")}发布到归程墙</button><button class="secondary-button" type="submit">${iconHtml("save")}仅保存到我的</button></div>
+        </form>`;
+    }
+    updateIcons();
+  }
+
+  async function renderBurialExplorer(answer) {
+    const container = $("#if-detail");
+    container.innerHTML = `<div class="loading-state">${iconHtml("loader-circle", "spin")}<span>正在载入安葬方式百科</span></div>`;
+    updateIcons();
+    if (!state.burialMethods.length) {
+      try {
+        const data = await apiFetch("/api/burial-methods");
+        state.burialMethods = data.methods || [];
+      } catch (error) {
+        container.innerHTML = `<div class="empty-state">${iconHtml("circle-alert")}<div><strong>百科暂时无法载入</strong><span>${escapeHtml(error.message)}</span></div></div>`;
+        updateIcons();
+        return;
+      }
+    }
+    const selected = answer.method || state.burialMethods[0]?.id || "";
+    const method = state.burialMethods.find((item) => item.id === selected) || state.burialMethods[0];
+    container.innerHTML = `
+      <div class="if-detail-head"><button class="back-button" type="button" data-if-back>${iconHtml("arrow-left")}回到卡片</button><p class="eyebrow">如果②</p><h2>如果你可以选择告别方式</h2><p>先认识 23 种方式，再决定你想继续了解哪一种。</p></div>
+      <div class="burial-layout">
+        <div class="burial-method-list">${state.burialMethods.map((item) => `<button class="${item.id === method.id ? "is-active" : ""}" type="button" data-burial-id="${escapeAttr(item.id)}"><small>${escapeHtml(item.category)}</small><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.cost)} · 环保性${escapeHtml(item.eco)}</span></button>`).join("")}</div>
+        <article class="burial-detail-card" id="burial-detail-card">${renderBurialSummary(method)}</article>
+      </div>`;
+    updateIcons();
+  }
+
+  function renderBurialSummary(method) {
+    const favorite = state.before.favorites.includes(method.id);
+    return `
+      <span class="burial-art">${iconHtml(method.id === "sea" ? "waves" : method.id === "tree" ? "tree-pine" : "leaf")}</span>
+      <p class="eyebrow">${escapeHtml(method.category)}</p>
+      <h3>${escapeHtml(method.name)}</h3>
+      <blockquote>${escapeHtml(method.idea)}</blockquote>
+      <div class="burial-facts"><span>费用：${escapeHtml(method.cost)}</span><span>环保性：${escapeHtml(method.eco)}</span></div>
+      <p>法律地位：${escapeHtml(method.legal || "以当地法规和主管部门答复为准。")}</p>
+      ${method.process?.length ? `<h4>基本流程</h4><ol>${method.process.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ol>` : ""}
+      ${method.faq?.length ? `<h4>你可能想知道</h4><ul>${method.faq.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+      <div class="form-actions"><button class="secondary-button" type="button" data-favorite-method="${escapeAttr(method.id)}">${iconHtml(favorite ? "bookmark-check" : "bookmark")} ${favorite ? "已收藏" : "收藏到我的"}</button><button class="primary-button" type="button" data-share-method="${escapeAttr(method.id)}">${iconHtml("send")}分享到归程墙</button></div>`;
+  }
+
+  function donationCard(title, copy, icon) {
+    return `<article><span>${iconHtml(icon)}</span><strong>${escapeHtml(title)}</strong><p>${escapeHtml(copy)}</p><small>登记渠道：人体器官捐献管理中心、微信公众号或当地红十字会。登记后可撤回，实际捐献仍需医学评估和家属沟通。</small></article>`;
+  }
+
+  async function submitMemory(event) {
+    event.preventDefault();
+    const content = $("#memory-input").value.trim();
+    const errorElement = $("#memory-error");
+    errorElement.hidden = true;
+    if (!content) {
+      $("#if-section-title").scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+      return;
+    }
+    state.before.memory = content;
+    persistState();
+    const button = event.currentTarget.querySelector('button[type="submit"]');
+    setButtonLoading(button, true, "正在发布");
+    try {
+      const post = await publishWallPost({ type: "那一天", content, alias: "匿名" });
+      rememberPublished(post);
+      toast("已发布到归程墙");
+      $("#if-section-title").scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+    } catch (error) {
+      errorElement.textContent = error.message;
+      errorElement.hidden = false;
+    } finally {
+      setButtonLoading(button, false);
+    }
+  }
+
+  async function handleBeforeSubmit(event) {
+    const formElement = event.target.closest("[data-before-kind]");
+    if (!formElement) return;
+    event.preventDefault();
+    const kind = formElement.dataset.beforeKind;
+    const form = new FormData(formElement);
+    if (kind === "directive") {
+      await submitDirective(formElement, form);
+      return;
+    }
+    const card = IF_CARDS.find((item) => item.id === state.activeIf);
+    if (!card) return;
+    const content = String(form.get("content") || "").trim();
+    if (!content) {
+      toast("先写一点内容，再保存");
+      return;
+    }
+    const answer = Object.fromEntries(form.entries());
+    state.before.answers[card.id] = answer;
+    persistState();
+    const publish = event.submitter?.name === "publish";
+    if (!publish) {
+      updateProfile();
+      toast("已保存到我的");
+      return;
+    }
+    setButtonLoading(event.submitter, true, "正在发布");
+    try {
+      const prefix = card.id === "last_year" ? `${answer.prompt} ` : card.id === "message" ? `写给${answer.target}：` : "";
+      const post = await publishWallPost({ type: card.type, content: `${prefix}${content}`, alias: "匿名" });
+      rememberPublished(post);
+      updateProfile();
+      toast("已发布到归程墙");
+    } catch (error) {
+      toast(error.message);
+    } finally {
+      setButtonLoading(event.submitter, false);
+    }
+  }
+
+  async function submitDirective(formElement, form) {
+    const payload = Object.fromEntries(form.entries());
+    const button = formElement.querySelector('button[type="submit"]');
+    setButtonLoading(button, true, "正在生成");
+    try {
+      const data = await apiFetch("/api/advance-directive", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      state.before.answers.directive = payload;
+      state.before.directiveText = data.text;
+      persistState();
+      renderIfDetail();
+      updateProfile();
+      toast("预嘱草稿已保存到我的");
+    } catch (error) {
+      toast(error.message);
+    } finally {
+      setButtonLoading(button, false);
+    }
+  }
+
+  async function handleBeforeDetailClick(event) {
+    if (event.target.closest("[data-if-back]")) {
+      $("#if-carousel").scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "center" });
+      return;
+    }
+    const burialButton = event.target.closest("[data-burial-id]");
+    if (burialButton) {
+      state.before.answers.farewell = { ...(state.before.answers.farewell || {}), method: burialButton.dataset.burialId };
+      persistState();
+      renderIfDetail();
+      return;
+    }
+    const favoriteButton = event.target.closest("[data-favorite-method]");
+    if (favoriteButton) {
+      const id = favoriteButton.dataset.favoriteMethod;
+      state.before.favorites = state.before.favorites.includes(id)
+        ? state.before.favorites.filter((item) => item !== id)
+        : [...state.before.favorites, id];
+      persistState();
+      renderIfDetail();
+      updateProfile();
+      toast(state.before.favorites.includes(id) ? "已收藏到我的" : "已取消收藏");
+      return;
+    }
+    const shareButton = event.target.closest("[data-share-method]");
+    if (shareButton) {
+      const method = state.burialMethods.find((item) => item.id === shareButton.dataset.shareMethod);
+      if (!method) return;
+      setButtonLoading(shareButton, true, "正在发布");
+      try {
+        const post = await publishWallPost({ type: "如果②", content: `我想了解${method.name}。${method.idea}`, alias: "匿名" });
+        rememberPublished(post);
+        toast("已分享到归程墙");
+      } catch (error) {
+        toast(error.message);
+      } finally {
+        setButtonLoading(shareButton, false);
+      }
+    }
+  }
+
+  async function publishWallPost({ type, content, alias }) {
+    return await apiFetch("/api/wall/posts", {
+      method: "POST",
+      body: JSON.stringify({ alias, city: state.city, type, topic: type, content }),
+    });
+  }
+
+  function rememberPublished(post) {
+    state.before.published = [{ id: post.id, type: post.type, content: post.content, created_at: post.created_at }, ...state.before.published].slice(0, 20);
+    persistState();
   }
 
   function showProcessView(name, focus = true) {
@@ -822,26 +1150,32 @@
 
   async function loadHelpWall() {
     const container = $("#help-posts");
-    container.innerHTML = `<div class="loading-state">${iconHtml("loader-circle", "spin")}<span>正在载入求助</span></div>`;
+    renderWallFilters();
+    container.innerHTML = `<div class="loading-state">${iconHtml("loader-circle", "spin")}<span>正在载入归程墙</span></div>`;
     updateIcons();
     try {
-      const data = await apiFetch("/api/help-wall");
-      container.innerHTML = data.posts.length ? data.posts.map(renderHelpPost).join("") : `<div class="empty-state">${iconHtml("message-circle-more")}<div><strong>还没有求助</strong><span>可以发布第一条，等待社区回应。</span></div></div>`;
+      const data = await apiFetch(`/api/wall/posts?type=${encodeURIComponent(state.wallFilter)}`);
+      container.innerHTML = data.posts.length ? data.posts.map(renderHelpPost).join("") : `<div class="empty-state">${iconHtml("message-circle-more")}<div><strong>还没有内容</strong><span>可以发布第一条，让这面墙慢慢长出来。</span></div></div>`;
     } catch (error) {
       container.innerHTML = `<div class="empty-state">${iconHtml("circle-alert")}<div><strong>暂时无法载入</strong><span>${escapeHtml(error.message)}</span></div></div>`;
     }
     updateIcons();
   }
 
+  function renderWallFilters() {
+    $("#wall-filters").innerHTML = WALL_FILTERS.map((filter) => `<button class="${state.wallFilter === filter ? "is-active" : ""}" type="button" data-wall-filter="${escapeAttr(filter)}">#${escapeHtml(filter)}</button>`).join("");
+  }
+
   function renderHelpPost(post) {
     const time = post.created_at ? new Date(post.created_at * 1000).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "示例";
-    const initial = String(post.alias || "家").trim().slice(0, 1);
+    const type = post.type || post.topic || "求助";
+    const initial = String(post.alias || "匿").trim().slice(0, 1);
     const replies = Array.isArray(post.replies) ? post.replies : [];
     const replyItems = replies.map((reply) => {
       const replyTime = reply.created_at ? new Date(reply.created_at * 1000).toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "刚刚";
       return `<div class="help-reply"><strong>${escapeHtml(reply.alias)}</strong><span>${escapeHtml(replyTime)}</span><p>${escapeHtml(reply.content)}</p></div>`;
     }).join("");
-    return `<article class="help-post"><div class="post-avatar">${escapeHtml(initial)}</div><div><div class="post-meta"><strong>${escapeHtml(post.alias)}</strong><span>${escapeHtml(post.city)} · ${escapeHtml(time)}</span></div><span class="topic-tag">${escapeHtml(post.topic)}</span><p>${escapeHtml(post.content)}</p><details class="reply-thread"><summary>${iconHtml("message-circle-reply")} ${replies.length ? `${replies.length} 条回应` : "回应这条求助"}</summary>${replyItems}<form class="reply-form" data-post-id="${escapeAttr(post.id)}"><label>称呼<input name="alias" maxlength="20" value="一位同行者" required /></label><label>回应<textarea name="content" minlength="2" maxlength="240" rows="3" placeholder="分享可以核对的流程经验，不要留下联系方式。" required></textarea></label><p class="form-error" hidden></p><button class="secondary-button" type="submit">${iconHtml("send")}发布回应</button></form></details></div></article>`;
+    return `<article class="help-post wall-post type-${escapeAttr(type)}"><div class="post-avatar">${escapeHtml(initial)}</div><div><div class="post-meta"><strong>${escapeHtml(post.alias)}</strong><span>${escapeHtml(post.city)} · ${escapeHtml(time)}</span></div><span class="topic-tag">#${escapeHtml(type)}</span><p>${escapeHtml(post.content)}</p><details class="reply-thread"><summary>${iconHtml("message-circle-reply")} ${replies.length ? `${replies.length} 条回应` : "回应这条内容"}</summary>${replyItems}<form class="reply-form" data-post-id="${escapeAttr(post.id)}"><label>称呼<input name="alias" maxlength="20" value="一位同行者" required /></label><label>回应<textarea name="content" minlength="2" maxlength="240" rows="3" placeholder="分享可以核对的经验或一句安静的回应，不要留下联系方式。" required></textarea></label><p class="form-error" hidden></p><button class="secondary-button" type="submit">${iconHtml("send")}发布回应</button></form></details></div></article>`;
   }
 
   async function submitHelpReply(event) {
@@ -876,13 +1210,13 @@
     const button = event.currentTarget.querySelector('button[type="submit"]');
     setButtonLoading(button, true, "正在发布");
     try {
-      await apiFetch("/api/help-wall", {
+      await apiFetch("/api/wall/posts", {
         method: "POST",
-        body: JSON.stringify({ alias: String(form.get("alias") || "一位家属"), city: state.city, topic: String(form.get("topic") || "其他"), content: String(form.get("content") || "") }),
+        body: JSON.stringify({ alias: String(form.get("alias") || "匿名"), city: state.city, type: String(form.get("type") || "求助"), topic: String(form.get("type") || "求助"), content: String(form.get("content") || "") }),
       });
       event.currentTarget.querySelector("textarea").value = "";
       $("#help-dialog").close();
-      toast("求助已发布");
+      toast("已发布到归程墙");
       await loadHelpWall();
     } catch (error) {
       errorElement.textContent = error.message;
@@ -968,7 +1302,7 @@
     persistState();
     if (state.processView === "overview") renderOverview();
     if (state.processView === "detail" && state.currentNodeId) renderDetail(nodeById(state.currentNodeId));
-    if (state.activeTab === "info") loadInfoPanel();
+    if (state.activeTab === "wall") loadInfoPanel();
   }
 
   function updateCityUI() {
@@ -1074,6 +1408,7 @@
   function updateProfile() {
     const completed = state.flow ? state.completed.filter((id) => state.flow.nodes.some((node) => node.id === id)).length : 0;
     const materials = Object.values(state.checks).reduce((total, values) => total + (Array.isArray(values) ? values.length : 0), 0);
+    const beforeCount = Number(Boolean(state.before.memory)) + Object.keys(state.before.answers).filter((key) => key !== "directive" || state.before.directiveText).length;
     $("#profile-name").textContent = state.user?.display_name || "访客用户";
     $("#profile-state").textContent = state.user ? state.user.email : "当前为本机访客模式";
     $("#profile-avatar").textContent = (state.user?.display_name || state.profileAlias || "访").slice(0, 1);
@@ -1082,7 +1417,11 @@
     $("#logout-button").hidden = !state.user;
     $("#profile-storage-note").textContent = state.user ? "办理进度已保存到这个账户。" : "访客进度保存在本机，登录后可保存到本地账户。";
     $("#stat-progress").textContent = `${completed}/${state.flow?.nodes.length || 5}`;
+    $("#stat-before").textContent = String(beforeCount);
     $("#stat-materials").textContent = String(materials);
+    $("#before-row-label").textContent = beforeCount ? `${beforeCount} 条` : "尚未开始";
+    $("#favorite-row-label").textContent = `${state.before.favorites.length} 项`;
+    $("#directive-row-label").textContent = state.before.directiveText ? "已生成" : "未生成";
     $("#progress-row-label").textContent = state.flow ? `${completed}/${state.flow.nodes.length} 已完成` : "尚未生成";
   }
 

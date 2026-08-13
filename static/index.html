@@ -25,7 +25,7 @@
     <div id="app" class="app-shell">
       <header class="app-bar" aria-label="应用栏">
         <button class="wordmark" id="brand-home" type="button" aria-label="回到规程">
-          <span><strong>归程</strong><small>一步一步，我们陪你</small></span>
+          <span><strong>归程</strong><small>从不敢谈死，到从容送别</small></span>
         </button>
         <div class="app-bar-actions">
           <button class="city-control" id="global-city" type="button" aria-label="更改办理城市">
@@ -39,19 +39,59 @@
       </header>
 
       <main id="main-content" tabindex="-1">
-        <section class="tab-page" id="tab-info" data-tab-page="info" hidden>
+        <section class="tab-page is-active" id="tab-before" data-tab-page="before">
+          <div class="page-frame before-page">
+            <section class="before-memory" aria-labelledby="before-memory-title">
+              <span class="memory-mark"><i data-lucide="flame-kindling" aria-hidden="true"></i></span>
+              <p class="eyebrow">那一天</p>
+              <h1 id="before-memory-title">那一天，你在心里举办过一场葬礼。</h1>
+              <p>每个人都有过这样的瞬间。可能是一条鱼，一只仓鼠，或者一个再也没来上课的同学。</p>
+              <form class="memory-form" id="memory-form">
+                <label for="memory-input">你可以写下那一刻的感受（可选）</label>
+                <textarea id="memory-input" maxlength="280" rows="3" placeholder="例如：小学三年级，仓鼠不动了，我把它埋在花坛里。"></textarea>
+                <p class="form-error" id="memory-error" role="alert" hidden></p>
+                <div class="memory-actions">
+                  <button class="primary-button" type="submit"><i data-lucide="send"></i>发布到归程墙</button>
+                  <button class="secondary-button" id="memory-skip" type="button">跳过</button>
+                </div>
+              </form>
+              <div class="memory-quotes" aria-label="别人的那一天">
+                <p>“小学三年级，仓鼠不动了，我把它埋在花坛里。” <span>匿名</span></p>
+                <p>“妈妈来接我时眼睛红了，回家看到椅子空着，我就知道了。” <span>小林</span></p>
+              </div>
+            </section>
+
+            <section class="if-section" aria-labelledby="if-section-title">
+              <div class="section-lead">
+                <div><p class="section-index">01</p><h2 id="if-section-title">选择你想探索的</h2></div>
+              </div>
+              <div class="if-carousel" id="if-carousel" aria-label="五个如果"></div>
+              <div class="if-dots" id="if-dots" aria-hidden="true"></div>
+              <section class="if-detail" id="if-detail" aria-live="polite"></section>
+            </section>
+
+            <button class="after-bridge" type="button" data-tab="process">
+              <span><i data-lucide="route"></i></span>
+              <strong>如果亲人已经离开</strong>
+              <small>前往「身后事」获取流程指引</small>
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
+        </section>
+
+        <section class="tab-page" id="tab-wall" data-tab-page="wall" hidden>
           <div class="page-frame">
             <header class="page-masthead">
               <div>
-                <p class="eyebrow">城市互助册</p>
-                <h1>信息与求助</h1>
-                <p>当地帮助、政策与公开渠道。</p>
+                <p class="eyebrow">统一社区</p>
+                <h1>归程墙</h1>
+                <p>身前事的思考与身后事的求助，在同一面墙上交织。</p>
               </div>
               <span class="city-stamp"><small>当前城市</small><strong id="info-city-label">北京</strong></span>
             </header>
 
             <div class="section-tabs" role="tablist" aria-label="信息分类">
-              <button class="is-active" type="button" role="tab" aria-selected="true" data-info-panel="help">求助墙</button>
+              <button class="is-active" type="button" role="tab" aria-selected="true" data-info-panel="help">墙面</button>
               <button type="button" role="tab" aria-selected="false" data-info-panel="policy">政策福利</button>
               <button type="button" role="tab" aria-selected="false" data-info-panel="phone">公益电话</button>
             </div>
@@ -59,17 +99,17 @@
             <section class="info-panel" id="info-help" data-info-view="help">
               <section class="help-visual-hero">
                 <span><i data-lucide="messages-square"></i></span>
-                <div><small>社区互助</small><strong>遇到拿不准的事，可以在这里问</strong><p>材料核对、流程经验、陪同跑腿与情绪支持。</p></div>
+                <div><small>归程墙</small><strong>每个人的“那一天”和每个人的求助混在一起</strong><p>可以发布思考、留言、哀思，也可以在需要时求助。</p></div>
               </section>
-              <div class="help-topic-strip" aria-label="求助类型"><span><i data-lucide="clipboard-check"></i>材料核对</span><span><i data-lucide="route"></i>流程经验</span><span><i data-lucide="heart-handshake"></i>陪同支持</span></div>
+              <div class="wall-filter-strip" id="wall-filters" aria-label="归程墙筛选"></div>
               <div class="section-lead">
-                <div><p class="section-index">01</p><h2>需要一双手时，来这里说</h2></div>
-                <button class="primary-button" id="open-help-dialog" type="button"><i data-lucide="square-pen"></i>发布求助</button>
+                <div><p class="section-index">01</p><h2>在这里留下一句话</h2></div>
+                <button class="primary-button" id="open-help-dialog" type="button"><i data-lucide="square-pen"></i>发布</button>
               </div>
               <p class="privacy-line"><i data-lucide="shield-check" aria-hidden="true"></i>公开内容请勿填写真实姓名、证件号、详细住址、病历、电话或银行信息。</p>
               <div class="feed-heading">
-                <strong>最新求助</strong>
-                <button class="icon-button" id="refresh-help" type="button" aria-label="刷新求助墙" title="刷新"><i data-lucide="refresh-cw"></i></button>
+                <strong>最新内容</strong>
+                <button class="icon-button" id="refresh-help" type="button" aria-label="刷新归程墙" title="刷新"><i data-lucide="refresh-cw"></i></button>
               </div>
               <div class="help-posts" id="help-posts" aria-live="polite"></div>
               <p class="source-footnote">社区经验仅供参考。医疗、公安、民政和法律事项以主管部门答复为准。</p>
@@ -91,7 +131,7 @@
           </div>
         </section>
 
-        <section class="tab-page is-active" id="tab-process" data-tab-page="process">
+        <section class="tab-page" id="tab-process" data-tab-page="process" hidden>
           <div class="process-view" id="process-intake">
             <div class="page-frame questionnaire-layout">
               <header class="questionnaire-thesis">
@@ -142,7 +182,7 @@
                 <div class="home-section-heading"><h2>当前进度</h2><button id="home-view-all" type="button">查看全部<i data-lucide="chevron-right"></i></button></div>
                 <div class="home-progress" id="home-progress" aria-label="五步办理进度"></div>
               </section>
-              <button class="companion-note" type="button" data-tab="info"><i data-lucide="hand-heart"></i><span>如果需要帮助，可以找家人或信任的人一起商量。</span><i data-lucide="chevron-right"></i></button>
+              <button class="companion-note" type="button" data-tab="wall"><i data-lucide="hand-heart"></i><span>如果需要帮助，可以找家人或信任的人一起商量。</span><i data-lucide="chevron-right"></i></button>
               <section class="home-next-section">
                 <div class="home-section-heading"><h2>接下来</h2></div>
                 <div id="home-next-list"></div>
@@ -221,11 +261,15 @@
 
               <div class="profile-stats" aria-label="我的办理数据">
                 <div><strong id="stat-progress">0/5</strong><span>完成节点</span></div>
+                <div><strong id="stat-before">0</strong><span>身前回答</span></div>
                 <div><strong id="stat-materials">0</strong><span>核对材料</span></div>
               </div>
 
               <section class="settings-section">
                 <div class="settings-heading"><p class="section-index">01</p><h2>我的内容</h2></div>
+                <button class="settings-row" type="button" data-profile-action="before"><span><i data-lucide="sparkles"></i><strong>我的身前事</strong></span><small id="before-row-label">尚未开始</small><i data-lucide="chevron-right"></i></button>
+                <button class="settings-row" type="button" data-profile-action="favorites"><span><i data-lucide="bookmark"></i><strong>我的收藏</strong></span><small id="favorite-row-label">0 项</small><i data-lucide="chevron-right"></i></button>
+                <button class="settings-row" type="button" data-profile-action="directive"><span><i data-lucide="file-text"></i><strong>我的预嘱文本</strong></span><small id="directive-row-label">未生成</small><i data-lucide="chevron-right"></i></button>
                 <button class="settings-row" type="button" data-profile-action="progress"><span><i data-lucide="route"></i><strong>办理进度</strong></span><small id="progress-row-label">尚未生成</small><i data-lucide="chevron-right"></i></button>
               </section>
 
@@ -279,8 +323,9 @@
 
       <nav class="bottom-nav" aria-label="主导航">
         <div>
-          <button type="button" data-tab="info"><i data-lucide="messages-square"></i><span>信息</span></button>
-          <button class="is-active" type="button" data-tab="process"><i data-lucide="route"></i><span>规程</span></button>
+          <button class="is-active" type="button" data-tab="before"><i data-lucide="sparkles"></i><span>身前事</span></button>
+          <button type="button" data-tab="process"><i data-lucide="route"></i><span>身后事</span></button>
+          <button type="button" data-tab="wall"><i data-lucide="messages-square"></i><span>归程墙</span></button>
           <button type="button" data-tab="profile"><i data-lucide="user-round"></i><span>我的</span></button>
         </div>
       </nav>
@@ -288,13 +333,13 @@
       <dialog class="app-dialog" id="help-dialog" aria-labelledby="help-dialog-title">
         <form method="dialog" class="dialog-close-row"><button class="icon-button" value="cancel" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button></form>
         <form id="help-form" class="dialog-form">
-          <p class="eyebrow">社区互助</p><h2 id="help-dialog-title">发布一条求助</h2>
+          <p class="eyebrow">归程墙</p><h2 id="help-dialog-title">发布一条内容</h2>
           <p class="privacy-line"><i data-lucide="shield-check"></i>不要填写真实姓名、证件号、详细住址、病历、电话或银行信息。</p>
-          <label>称呼<input name="alias" type="text" maxlength="20" value="一位家属" required /></label>
-          <label>需要哪类帮助<select name="topic"><option>跑腿陪同</option><option>流程经验</option><option>材料核对</option><option>情绪支持</option><option>其他</option></select></label>
-          <label>想说的话<textarea name="content" minlength="4" maxlength="280" rows="5" placeholder="例如：第一次办理，想请有经验的人帮我核对材料清单。" required></textarea></label>
+          <label>称呼<input name="alias" type="text" maxlength="20" value="匿名" required /></label>
+          <label>内容类型<select name="type"><option>那一天</option><option>如果①</option><option>如果②</option><option>如果③</option><option>如果④</option><option>如果⑤</option><option>求助</option><option>哀思</option></select></label>
+          <label>想说的话<textarea name="content" minlength="4" maxlength="280" rows="5" placeholder="例如：Before I go I want to 带爸妈去看一次极光。" required></textarea></label>
           <p class="form-error" id="help-error" role="alert" hidden></p>
-          <button class="primary-button" type="submit"><i data-lucide="send"></i>发布求助</button>
+          <button class="primary-button" type="submit"><i data-lucide="send"></i>发布到归程墙</button>
         </form>
       </dialog>
 

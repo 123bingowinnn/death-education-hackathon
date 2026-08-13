@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -26,8 +27,14 @@ def test_health_never_exposes_keys() -> None:
     assert response.status_code == 200
     text = response.text
     assert "sk-" not in text
-    assert settings.amap_api_key not in text
-    assert response.json()["services"] == {"amap": "configured", "kimi": "configured"}
+    if settings.amap_api_key:
+        assert settings.amap_api_key not in text
+    if settings.kimi_api_key:
+        assert settings.kimi_api_key not in text
+    assert response.json()["services"] == {
+        "amap": "configured" if settings.amap_ready else "missing",
+        "kimi": "configured" if settings.kimi_ready else "missing",
+    }
 
 
 def test_flow_requires_legal_confirmation() -> None:
@@ -92,6 +99,7 @@ def test_city_suffix_is_not_duplicated() -> None:
 
 
 def test_flow_can_include_guarded_kimi_personalization(monkeypatch) -> None:
+    monkeypatch.setattr(server, "settings", replace(server.settings, kimi_api_key="test-kimi-key"))
     personalized_sop = {
         "personalization": {
             "summary": "已按医院场景和费用需求整理办理重点。",
@@ -252,6 +260,64 @@ def test_help_wall_rejects_contact_number_in_alias() -> None:
         },
     )
     assert response.status_code == 400
+
+
+def test_wall_supports_before_life_post_types() -> None:
+    created = client.post(
+        "/api/wall/posts",
+        json={
+            "alias": "匿名",
+            "city": "北京",
+            "type": "那一天",
+            "topic": "那一天",
+            "content": "小学三年级，仓鼠不动了，我把它埋在花坛里。",
+        },
+    )
+    assert created.status_code == 201
+    assert created.json()["type"] == "那一天"
+
+    listed = client.get("/api/wall/posts?type=那一天")
+    assert listed.status_code == 200
+    assert any(item["type"] == "那一天" for item in listed.json()["posts"])
+
+
+def test_burial_methods_include_full_23_item_encyclopedia() -> None:
+    response = client.get("/api/burial-methods")
+    assert response.status_code == 200
+    methods = response.json()["methods"]
+    assert len(methods) == 23
+    sea = next(item for item in methods if item["id"] == "sea")
+    assert sea["name"] == "海葬"
+    assert sea["process"]
+
+
+def test_advance_directive_generates_local_text_without_contacts() -> None:
+    response = client.post(
+        "/api/advance-directive",
+        json={
+            "cpr": "不希望",
+            "ventilator": "仅在可能恢复时使用",
+            "feeding": "仅在能改善生活质量时使用",
+            "irreversible": "放弃过度治疗注重舒适",
+            "place": "家里",
+            "note": "希望优先缓解疼痛",
+        },
+    )
+    assert response.status_code == 200
+    assert "生前医疗意愿草稿" in response.json()["text"]
+
+    rejected = client.post(
+        "/api/advance-directive",
+        json={
+            "cpr": "不希望",
+            "ventilator": "不希望",
+            "feeding": "不希望",
+            "irreversible": "不确定",
+            "place": "医院",
+            "note": "联系 13800138000",
+        },
+    )
+    assert rejected.status_code == 400
 
 
 def test_user_note_redacts_obvious_contacts_before_ai() -> None:
